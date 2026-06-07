@@ -1,0 +1,7 @@
+# The encryption passcode lives here and must NEVER be committed.
+secret/
+# local dev server log
+server.log
+# python cache
+__pycache__/
+*.pyc
