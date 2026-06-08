@@ -4,7 +4,7 @@
    - Data JSON: network-first, falling back to the last cached copy when offline.
    Bump CACHE when the shell changes to force an update. */
 
-const CACHE = "daily-brief-v1";
+const CACHE = "daily-brief-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -49,13 +49,20 @@ self.addEventListener("fetch", (e) => {
         .catch(() => caches.match(req))
     );
   } else {
-    // cache-first for the shell
+    // stale-while-revalidate for the shell: serve the cached copy instantly,
+    // but always fetch a fresh copy in the background to update the cache for
+    // next time. This keeps the app opening instantly AND self-healing on updates.
     e.respondWith(
-      caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
-      }).catch(() => cached))
+      caches.match(req).then((cached) => {
+        const network = fetch(req).then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        }).catch(() => cached);
+        return cached || network;
+      })
     );
   }
 });

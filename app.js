@@ -437,7 +437,12 @@
       await loadAll();
     } catch (e) {
       if (e.message === "LOCKED") { showLock(); return; }
+      // any other failure: don't leave a blank screen - show the app with empty states
     }
+    // reveal the app on EVERY successful start, however we got unlocked
+    // (saved-passcode path skips the lock form, so it must happen here too)
+    $("#lockscreen").hidden = true;
+    $("#app").hidden = false;
     renderToday();
     renderWeek();
     renderTodos();
@@ -449,10 +454,20 @@
     if (unlocked) await start();
   }
 
-  // register service worker for offline + instant open
+  // register service worker for offline + instant open.
+  // When a new version activates and takes control, reload once so the
+  // latest code is used (prevents getting stuck on an old cached shell).
   if ("serviceWorker" in navigator) {
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js")
+        .then((reg) => reg.update())
+        .catch(() => {});
     });
   }
 
