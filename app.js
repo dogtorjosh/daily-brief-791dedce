@@ -231,10 +231,19 @@
         (meta && meta.generatedAt ? ` &middot; updated ${esc(fmtTime(meta.generatedAt))}` : "") + `</p>`;
       if (brief.headline) h += `<p class="headline">${esc(brief.headline)}</p>`;
       lead.innerHTML = h;
-      if (meta && meta.isToday === false) {
-        lead.appendChild(el("span", "stale-note", "Showing " + esc(fmtDate(brief.date)) + " &middot; today's not in yet"));
-      }
       wrap.appendChild(lead);
+
+      // Loud staleness banner: publish.py stamps brief.staleNotice when today's
+      // brief didn't generate and it fell back to an older file. Fall back to the
+      // index isToday flag if the notice is ever absent.
+      const stale = brief.staleNotice && brief.staleNotice.message
+        ? brief.staleNotice.message
+        : (meta && meta.isToday === false
+            ? "⚠️ Today's brief didn't generate — showing " + fmtDate(brief.date) + " instead."
+            : null);
+      if (stale) {
+        wrap.appendChild(el("div", "stale-banner", esc(stale)));
+      }
     }
 
     const secs = (brief.sections || []).filter((s) => s.items && s.items.length);

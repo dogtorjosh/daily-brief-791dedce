@@ -5,3 +5,5 @@ server.log
 # python cache
 __pycache__/
 *.pyc
+# temp validation scratch (safe to delete)
+_validate_publish.py

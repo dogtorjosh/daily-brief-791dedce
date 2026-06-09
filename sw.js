@@ -4,7 +4,7 @@
    - Data JSON: network-first, falling back to the last cached copy when offline.
    Bump CACHE when the shell changes to force an update. */
 
-const CACHE = "daily-brief-v2";
+const CACHE = "daily-brief-v3";
 const SHELL = [
   "./",
   "./index.html",

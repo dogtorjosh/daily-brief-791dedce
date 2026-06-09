@@ -144,6 +144,30 @@ body {
   border-radius: 999px;
 }
 
+/* Loud banner when today's brief didn't generate and we're showing an older one.
+   Amber, full-width, hard to miss — the quiet pill above wasn't enough. */
+.stale-banner {
+  display: block;
+  margin: 12px 0 4px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #7a4f00;
+  background: #fff4d6;
+  border: 1px solid #f0c651;
+  border-left: 4px solid #e0a106;
+  border-radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  .stale-banner {
+    color: #ffd98a;
+    background: #3a2e12;
+    border-color: #6b551f;
+    border-left-color: #e0a106;
+  }
+}
+
 /* ---------- Cards / sections ---------- */
 .card {
   background: var(--card);

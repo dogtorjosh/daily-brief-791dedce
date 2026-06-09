@@ -9,7 +9,9 @@ What it does, every run:
   5. Commits and pushes to GitHub (so GitHub Pages serves the fresh data)
 
 It is deliberately resilient: if a brief for today doesn't exist, it falls back to
-the most recent file of that kind, records the real date, and never crashes.
+the most recent file of that kind, records the real date, and never crashes. When it
+does fall back, it stamps the data with a staleNotice so the app shows a loud banner
+instead of silently serving yesterday's brief.
 
 It NEVER modifies anything in ../outputs/ - those files are read-only source.
 
@@ -225,6 +227,38 @@ def collect_todos(am, eod, weekly):
     return todos
 
 
+def pretty_date(date_str):
+    """'2026-06-08' -> 'Mon, Jun 8'. Falls back to the raw string on any problem."""
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d")
+        return f"{d.strftime('%a')}, {d.strftime('%b')} {d.day}"
+    except (ValueError, TypeError):
+        return date_str or ""
+
+
+def flag_if_stale(data, meta, label, due_hour):
+    """If a brief should exist for today but doesn't (pick() fell back to an older
+    file), stamp the data with a staleNotice so the app shows a loud banner instead
+    of silently serving yesterday's. Durable guard - lives here in the pipeline.
+
+    due_hour is the local hour after which today's brief is expected (AM after the
+    6 AM run, EOD after the 6 PM run). Before that hour an older file is normal and
+    we say nothing - this avoids crying wolf every morning when last night's EOD is
+    legitimately the newest one."""
+    if not data or not meta or meta.get("isToday") is not False:
+        return
+    if now_local().hour < due_hour:
+        return  # today's brief isn't due yet; an older one is expected
+    shown = meta.get("fileDate") or meta.get("date")
+    notice = "Today's " + label + " brief didn't generate - showing " \
+             + pretty_date(shown) + " instead."
+    data["staleNotice"] = {
+        "message": "⚠️ " + notice,
+        "shownDate": shown,
+    }
+    log(f"STALE: {label} brief for today is missing; flagged fallback to {shown}")
+
+
 def git_push():
     """Commit any data changes and push. Returns True on a successful push.
     Skips quietly if this folder isn't a git repo with a remote yet."""
@@ -272,6 +306,12 @@ def main():
     am, am_meta = pick("am", today_str)
     eod, eod_meta = pick("eod", today_str)
     weekly, weekly_meta = pick("weekly", today_str, want_today=False)
+
+    # Guard: if today's AM or EOD brief never wrote a file, pick() falls back to the
+    # most recent one. Flag that loudly so the app never silently shows a stale card.
+    # AM is due after the 6 AM run; EOD after the 6 PM run.
+    flag_if_stale(am, am_meta, "morning", due_hour=6)
+    flag_if_stale(eod, eod_meta, "evening", due_hour=18)
 
     write("today-am.json", am or {"empty": True})
     write("today-eod.json", eod or {"empty": True})
